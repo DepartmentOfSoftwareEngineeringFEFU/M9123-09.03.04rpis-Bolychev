@@ -9,6 +9,9 @@ from typing import Optional
 from models.users_model import *
 from utils import get_db_connection
 from auth import create_access_token, verify_password, SECRET_KEY, ALGORITHM
+import smtplib
+from starlette.responses import JSONResponse
+
 
 router = APIRouter()
 security = HTTPBearer()
@@ -117,7 +120,7 @@ async def login_for_access_token(username: str = Form(...), password: str = Form
         )
     access_token_expires = timedelta(minutes=300)
     access_token = create_access_token(
-        data={"sub": user['user_login'], "is_admin": user['user_is_admin']},
+        data={"id": str(user['user_id']), "sub": user['user_login'], "surname": user['user_surname'], "name": user['user_name'], "fathername": user['user_fathername'], "email": user['user_email'], "picture_id": str(user['user_picture_id']), "is_admin": user['user_is_admin']},
         expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
@@ -359,11 +362,11 @@ async def users_insert(
 ):
     """Описание: добавление пользователя. На ввод подаются логин, пароль, email, фамилия, имя, отчество, возраст, пол и идентификатор картинки."""
     conn = get_db_connection()
-    if user_login is not None and len(user_login) >= 3:
+    if user_login is not None and len(user_login) < 3:
         raise HTTPException(status_code=400, detail="Ошибка: логин пользователя должен быть не менее 3 символов.")
     if user_login is not None and len(user_login) > 30:
         raise HTTPException(status_code=400, detail="Ошибка: длина логина должна быть меньше или равна 30 символов.")
-    if user_password is not None and len(user_password) >= 6:
+    if user_password is not None and len(user_password) < 6:
         raise HTTPException(status_code=400, detail="Ошибка: пароль пользователя должен быть не менее 6 символов.")
     if user_email is not None and len(user_email) == 0:
         raise HTTPException(status_code=400, detail="Ошибка: email пользователя не должен быть пустым.")
@@ -383,7 +386,7 @@ async def users_insert(
 
     hashed_password = get_password_hash(user_password)
     x = insert_user(conn, user_login, hashed_password, user_email, user_surname, user_name, user_fathername, user_age, user_is_female, user_picture_id)
-    return Response("{'message':'Пользователь создан.'}", status_code=200)
+    return JSONResponse(content={'message': 'Пользователь создан.'}, status_code=200)
 
 @router.patch("/users/update", tags=["UserController"], responses={
     200: {
@@ -489,7 +492,7 @@ async def users_update(
 
     hashed_password = get_password_hash(user_password) if user_password else None
     x = update_user(conn, user_id, user_login, hashed_password, user_email, user_surname, user_name, user_fathername, user_age, user_is_female, user_picture_id)
-    return Response("{'message':'Пользователь обновлён.'}", status_code=200)
+    return JSONResponse(content={'message': 'Пользователь обновлён.'}, status_code=200)
 
 @router.patch("/users/{user_id}/set-admin", tags=["UserController"], responses={
     200: {

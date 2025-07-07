@@ -42,6 +42,8 @@ def insert_territorie(conn, user_territorie_landscape_id, user_territorie_descri
         "userterritoriecolorb": user_territorie_color_b
     })
     conn.commit()
+    return cur.lastrowid
+
 
 def delete_territorie(conn, user_territorie_id):
     cur = conn.cursor()
@@ -69,6 +71,19 @@ def update_territorie(conn, user_territorie_id, user_territorie_landscape_id, us
         "userterritoriecolorr": user_territorie_color_r,
         "userterritoriecolorg": user_territorie_color_g,
         "userterritoriecolorb": user_territorie_color_b
+    })
+    conn.commit()
+
+
+def untie_landscape_from_territorie(conn, user_territorie_id):
+    cur = conn.cursor()
+    cur.execute('''
+        UPDATE territories
+        SET
+            territorie_landscape_id = NULL
+        WHERE territorie_id = :userterritorieid
+    ''', {
+        "userterritorieid": user_territorie_id
     })
     conn.commit()
 
@@ -113,6 +128,9 @@ def get_territorie_with_related_objects(conn, territorie_id, is_need_pictures=Fa
 
     territorie_data = territorie.to_dict(orient="records")[0]
     landscape_id = territorie_data['territorie_landscape_id']
+
+    if not landscape_id:
+        return None
 
     # Получаем информацию о ландшафте
     landscape = pd.read_sql(f'''
